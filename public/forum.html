@@ -1,39 +1,82 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Celebrity Pen Pal Forum</title>
-  <link rel="stylesheet" href="css/style.css">
+  <title>Celebrity Pen Pal Forum 💬</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Caveat:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .forum-container { max-width: 800px; margin: 2rem auto; padding: 2rem; }
+    .topic-list { list-style: none; padding: 0; }
+    .topic-item { background: white; margin: 1rem 0; padding: 1rem; border-radius: 15px; box-shadow: 0 2px 10px rgba(255,182,193,0.3); }
+    .topic-link { text-decoration: none; color: inherit; display: block; }
+    .topic-link strong { display: block; color: #FF69B4; font-size: 1.2rem; margin-bottom: 0.5rem; }
+    .meta { color: #888; font-size: 0.9rem; }
+    .original-post, .reply { background: white; margin: 1rem 0; padding: 1rem; border-radius: 15px; }
+    .original-post { border-left: 4px solid #FF69B4; }
+    .reply { border-left: 4px solid #98FF98; }
+    .form-card { background: white; padding: 2rem; border-radius: 25px; margin: 2rem 0; box-shadow: 0 4px 20px rgba(255,182,193,0.3); }
+    .form-input, .form-textarea { width: 100%; padding: 1rem; border: 2px solid #FFB6C1; border-radius: 10px; margin: 0.5rem 0; font-family: 'Nunito', sans-serif; }
+    .form-textarea { min-height: 100px; resize: vertical; }
+    .back-btn { margin-bottom: 1rem; }
+    .empty, .error { text-align: center; padding: 2rem; color: #888; }
+  </style>
 </head>
 <body>
-  <header>
-    <h1>Celebrity Pen Pal Forum</h1>
+  <header class="site-header">
+    <div class="logo-container">
+      <div class="logo-icon">💌</div>
+      <h1 class="logo-text">Celebrity Pen Pal</h1>
+    </div>
+    <nav class="main-nav">
+      <a href="/" class="nav-link">← Back Home</a>
+    </nav>
   </header>
-  <main>
+
+  <main class="forum-container">
+    <h2 class="section-title">Community Forum 💬</h2>
+    <p style="text-align: center; color: #888; margin-bottom: 2rem;">Share your pen pal experiences and connect with other fans!</p>
+    
+    <!-- Topics List -->
     <section id="topics">
-      <h2>Topics</h2>
-      <ul id="topic-list">
-        <!-- Topics will be dynamically loaded here -->
+      <h3 style="color: #FF69B4; margin-bottom: 1rem;">Recent Discussions</h3>
+      <ul id="topic-list" class="topic-list">
+        <li class="empty">Loading topics... ✨</li>
       </ul>
+    </section>
+    
+    <!-- Create Topic Form -->
+    <section class="form-card">
+      <h3 style="color: #FF69B4; margin-bottom: 1rem;">Start a New Topic 📝</h3>
       <form id="create-topic-form">
-        <input type="text" id="topic-title" placeholder="Topic Title" required>
-        <textarea id="topic-content" placeholder="Topic Content" required></textarea>
-        <button type="submit">Create Topic</button>
+        <input type="text" id="topic-title" class="form-input" placeholder="What's on your mind?" required>
+        <input type="text" id="author-name" class="form-input" placeholder="Your name (optional)">
+        <textarea id="topic-content" class="form-textarea" placeholder="Share your thoughts, letter experiences, or questions..." required></textarea>
+        <button type="submit" class="btn btn-primary">Post Topic ✨</button>
       </form>
     </section>
+    
+    <!-- Posts Section (hidden initially) -->
     <section id="posts" style="display: none;">
-      <h2 id="post-topic-title"></h2>
-      <ul id="post-list">
-        <!-- Posts will be dynamically loaded here -->
-      </ul>
-      <form id="create-post-form">
-        <textarea id="post-content" placeholder="Your Reply" required></textarea>
-        <button type="submit">Reply</button>
-      </form>
+      <button class="btn btn-secondary back-btn" onclick="location.reload()">← Back to Topics</button>
+      <h3 id="post-topic-title" style="color: #FF69B4; margin: 1rem 0;"></h3>
+      <ul id="post-list" class="topic-list"></ul>
+      
+      <div class="form-card">
+        <h4 style="color: #FF69B4; margin-bottom: 1rem;">Reply 💬</h4>
+        <form id="create-post-form">
+          <textarea id="post-content" class="form-textarea" placeholder="Write your reply..." required></textarea>
+          <button type="submit" class="btn btn-primary">Post Reply ✨</button>
+        </form>
+      </div>
     </section>
   </main>
+
+  <footer class="site-footer">
+    <p>Made with 💌 by Celebrity Pen Pal</p>
+  </footer>
+
   <script src="js/forum.js"></script>
 </body>
 </html>

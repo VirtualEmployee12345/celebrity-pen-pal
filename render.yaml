@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: celebrity-pen-pal
+    env: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HANDWRYTTEN_API_KEY
+        sync: false
+      - key: HANDWRYTTEN_API_SECRET
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
