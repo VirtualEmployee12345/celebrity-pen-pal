@@ -7,25 +7,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Caveat:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <style>
-        .penpal-container {
+        .form-container {
             max-width: 600px;
             margin: 2rem auto;
             padding: 2rem;
             background: white;
-            border-radius: 30px;
-            box-shadow: 0 10px 40px rgba(255,182,193,0.3);
-        }
-        .penpal-title {
-            font-family: 'Caveat', cursive;
-            font-size: 2.5rem;
-            color: #FF69B4;
-            text-align: center;
-            margin-bottom: 1rem;
-        }
-        .penpal-subtitle {
-            text-align: center;
-            color: #666;
-            margin-bottom: 2rem;
+            border-radius: 25px;
+            box-shadow: 0 4px 20px rgba(255,182,193,0.3);
         }
         .form-group {
             margin-bottom: 1.5rem;
@@ -33,60 +21,62 @@
         .form-group label {
             display: block;
             margin-bottom: 0.5rem;
-            color: #4A4A4A;
             font-weight: 600;
+            color: #4A4A4A;
         }
         .form-group input,
         .form-group textarea,
         .form-group select {
             width: 100%;
             padding: 1rem;
-            border: 2px solid #FFE4EC;
-            border-radius: 15px;
-            font-size: 1rem;
+            border: 2px solid #FFB6C1;
+            border-radius: 10px;
             font-family: 'Nunito', sans-serif;
-        }
-        .form-group input:focus,
-        .form-group textarea:focus,
-        .form-group select:focus {
-            outline: none;
-            border-color: #FF69B4;
+            font-size: 1rem;
         }
         .form-group textarea {
             min-height: 100px;
             resize: vertical;
         }
-        .address-help {
-            font-size: 0.85rem;
-            color: #888;
-            margin-top: 0.5rem;
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem;
+            background: #FFE4EC;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+        }
+        .checkbox-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        .checkbox-group label {
+            margin: 0;
+            cursor: pointer;
         }
         .privacy-note {
-            background: #FFFACD;
-            padding: 1rem;
-            border-radius: 10px;
-            margin-bottom: 2rem;
             font-size: 0.9rem;
+            color: #888;
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            background: #FFFACD;
+            border-radius: 5px;
         }
-        .privacy-note strong {
-            color: #FF69B4;
-        }
-        .penpal-btn {
+        .btn-full {
             width: 100%;
-            padding: 1rem;
-            font-size: 1.1rem;
+            margin-top: 1rem;
         }
-        .error-message {
-            background: #FFE4EC;
-            color: #FF69B4;
+        .success-message {
+            background: #98FF98;
             padding: 1rem;
             border-radius: 10px;
             margin-bottom: 1rem;
             display: none;
         }
-        .success-message {
-            background: #98FF98;
-            color: #2E8B57;
+        .error-message {
+            background: #FFB6C1;
             padding: 1rem;
             border-radius: 10px;
             margin-bottom: 1rem;
@@ -101,100 +91,120 @@
             <h1 class="logo-text">Celebrity Penpal</h1>
         </div>
         <nav class="main-nav">
-            <a href="/" class="nav-link">Home</a>
+            <a href="/" class="nav-link">← Home</a>
             <a href="/profile" class="nav-link">Profile</a>
         </nav>
     </header>
 
-    <main class="penpal-container">
-        <h2 class="penpal-title">Become a Penpal ✨</h2>
-        <p class="penpal-subtitle">Let fans send YOU handwritten letters!</p>
-        
-        <div class="error-message" id="errorMsg"></div>
-        <div class="success-message" id="successMsg"></div>
-        
-        <div class="privacy-note">
-            <strong>🔒 Privacy First</strong><br>
-            Your address is kept private. We handle all letter delivery through our service. 
-            Fans write to you through our platform, and we mail the physical letters to your address.
+    <main style="padding: 2rem;">
+        <div class="form-container">
+            <h2 class="section-title" style="margin-bottom: 1.5rem;">Become a Penpal 💌</h2>
+            
+            <div id="successMessage" class="success-message"></div>
+            <div id="errorMessage" class="error-message"></div>
+            
+            <form id="penpalForm">
+                <div class="form-group">
+                    <label for="fanmailAddress">Your Mailing Address *</label>
+                    <textarea id="fanmailAddress" name="fanmail_address" placeholder="Your Name&#10;123 Main Street&#10;Apartment 4B&#10;City, ST 12345" required></textarea>
+                    <p class="privacy-note">📍 This is where letters will be sent. Use your home, PO box, or work address.</p>
+                </div>
+                
+                <div class="form-group">
+                    <label for="category">Category</label>
+                    <select id="category" name="category">
+                        <option value="fan">Fan / Supporter</option>
+                        <option value="influencer">Creator / Influencer</option>
+                        <option value="musician">Musician</option>
+                        <option value="actor">Actor / Performer</option>
+                        <option value="author">Author / Writer</option>
+                        <option value="athlete">Athlete</option>
+                        <option value="business">Business Professional</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="bio">Bio (Optional)</label>
+                    <input type="text" id="bio" name="bio" placeholder="A short description about yourself">
+                </div>
+                
+                <div class="checkbox-group">
+                    <input type="checkbox" id="isPublic" name="is_public" value="true" checked>
+                    <label for="isPublic">
+                        <strong>Make my profile public</strong><br>
+                        <small>Anyone can send me handwritten letters</small>
+                    </label>
+                </div>
+                
+                <div id="privacyNote" class="privacy-note" style="display: none;">
+                    🔒 <strong>Private mode:</strong> Only you will be able to send letters to this address. Perfect for personal use or testing.
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-full">
+                    Create My Penpal Profile ✨
+                </button>
+            </form>
+            
+            <div style="margin-top: 2rem; text-align: center;">
+                <p>Want to add a family member instead?</p>
+                <a href="/add-family" class="btn btn-secondary">Add Grandma / Relative 💝</a>
+            </div>
         </div>
-        
-        <form id="penpalForm">
-            <div class="form-group">
-                <label for="category">What describes you best?</label>
-                <select id="category" required>
-                    <option value="">Choose a category...</option>
-                    <option value="fan">Fan / Enthusiast</option>
-                    <option value="creator">Content Creator</option>
-                    <option value="musician">Musician / Artist</option>
-                    <option value="writer">Writer / Author</option>
-                    <option value="athlete">Athlete / Fitness</option>
-                    <option value="influencer">Influencer</option>
-                    <option value="other">Other</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label for="address">Your Mailing Address</label>
-                <textarea id="address" placeholder="Your Name&#10;Street Address&#10;City, State ZIP&#10;Country" required></textarea>
-                <p class="address-help">This is where we'll mail the handwritten letters you receive. Format it exactly as it should appear on an envelope.</p>
-            </div>
-            
-            <div class="form-group">
-                <label for="bio">Bio (optional)</label>
-                <input type="text" id="bio" placeholder="Tell fans a little about yourself..." maxlength="200">
-            </div>
-            
-            <button type="submit" class="btn btn-primary penpal-btn">Start Receiving Letters ✨</button>
-        </form>
     </main>
 
     <script>
+        // Check if logged in
         const token = localStorage.getItem('token');
-        
         if (!token) {
-            alert('Please log in first!');
-            window.location.href = '/login';
+            window.location.href = '/login?redirect=/become-penpal';
         }
         
-        document.getElementById('penpalForm').addEventListener('submit', async (e) => {
+        // Toggle privacy note
+        document.getElementById('isPublic').addEventListener('change', function() {
+            document.getElementById('privacyNote').style.display = this.checked ? 'none' : 'block';
+        });
+        
+        // Handle form submission
+        document.getElementById('penpalForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            const errorMsg = document.getElementById('errorMsg');
-            const successMsg = document.getElementById('successMsg');
-            errorMsg.style.display = 'none';
-            successMsg.style.display = 'none';
-            
-            const category = document.getElementById('category').value;
-            const fanmail_address = document.getElementById('address').value;
-            const bio = document.getElementById('bio').value;
+            const formData = {
+                fanmail_address: document.getElementById('fanmailAddress').value,
+                category: document.getElementById('category').value,
+                bio: document.getElementById('bio').value,
+                is_public: document.getElementById('isPublic').checked
+            };
             
             try {
                 const response = await fetch('/api/become-penpal', {
                     method: 'POST',
-                    headers: { 
+                    headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + token
+                        'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify({ category, fanmail_address, bio })
+                    body: JSON.stringify(formData)
                 });
                 
-                const data = await response.json();
+                const result = await response.json();
                 
-                if (data.success) {
-                    successMsg.textContent = data.message || 'Welcome to Celebrity Penpal!';
-                    successMsg.style.display = 'block';
+                if (result.success) {
+                    document.getElementById('successMessage').textContent = result.message;
+                    document.getElementById('successMessage').style.display = 'block';
+                    document.getElementById('errorMessage').style.display = 'none';
                     
+                    // Redirect to profile after 2 seconds
                     setTimeout(() => {
                         window.location.href = '/profile';
                     }, 2000);
                 } else {
-                    errorMsg.textContent = data.error || 'Something went wrong';
-                    errorMsg.style.display = 'block';
+                    document.getElementById('errorMessage').textContent = result.error || 'Something went wrong';
+                    document.getElementById('errorMessage').style.display = 'block';
                 }
             } catch (error) {
-                errorMsg.textContent = 'Failed to save. Please try again.';
-                errorMsg.style.display = 'block';
+                console.error('Error:', error);
+                document.getElementById('errorMessage').textContent = 'Failed to create profile. Please try again.';
+                document.getElementById('errorMessage').style.display = 'block';
             }
         });
     </script>

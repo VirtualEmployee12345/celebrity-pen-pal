@@ -171,5 +171,14 @@
     </div>
 
     <script src="app.js"></script>
+    <script>
+        // Update nav based on login status
+        const token = localStorage.getItem('token');
+        if (token) {
+            document.getElementById('loginLink').style.display = 'none';
+        } else {
+            document.getElementById('profileLink').style.display = 'none';
+        }
+    </script>
 </body>
 </html>

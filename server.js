@@ -72,8 +72,11 @@ db.serialize(() => {
     popularity_score INTEGER DEFAULT 0,
     user_id INTEGER,
     is_public BOOLEAN DEFAULT 1,
+    created_by_user_id INTEGER,
+    relationship_type TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (created_by_user_id) REFERENCES users(id)
   )`);
   
   db.run(`CREATE TABLE IF NOT EXISTS letters (
@@ -136,6 +139,10 @@ app.get('/profile', (req, res) => {
 
 app.get('/become-penpal', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'become-penpal.html'));
+});
+
+app.get('/add-family', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'add-family.html'));
 });
 
 // Health check for Render
@@ -230,10 +237,10 @@ app.get('/api/auth/me', (req, res) => {
 
 // USER PENPAL ROUTES
 
-// Become a penpal (create public profile)
+// Become a penpal (create public or private profile)
 app.post('/api/become-penpal', (req, res) => {
   const token = req.headers.authorization?.replace('Bearer ', '');
-  const { fanmail_address, bio, category } = req.body;
+  const { fanmail_address, bio, category, is_public } = req.body;
   
   if (!token) {
     return res.status(401).json({ error: 'Not authenticated' });
@@ -242,6 +249,8 @@ app.post('/api/become-penpal', (req, res) => {
   if (!fanmail_address) {
     return res.status(400).json({ error: 'Address required' });
   }
+  
+  const isPublic = is_public === true || is_public === 'true' || is_public === 1 ? 1 : 0;
   
   db.get('SELECT * FROM users WHERE token = ?', [token], (err, user) => {
     if (err || !user) {
@@ -253,31 +262,80 @@ app.post('/api/become-penpal', (req, res) => {
       if (existing) {
         // Update existing
         db.run(
-          'UPDATE celebrities SET fanmail_address = ?, bio = ?, category = ? WHERE user_id = ?',
-          [fanmail_address, bio, category || 'fan', user.id],
+          'UPDATE celebrities SET fanmail_address = ?, bio = ?, category = ?, is_public = ? WHERE user_id = ?',
+          [fanmail_address, bio, category || 'fan', isPublic, user.id],
           function(err) {
             if (err) {
               return res.status(500).json({ error: 'Failed to update profile' });
             }
-            res.json({ success: true, celebrity_id: existing.id, message: 'Profile updated' });
+            res.json({ 
+              success: true, 
+              celebrity_id: existing.id, 
+              is_public: isPublic,
+              message: isPublic ? 'Public profile updated!' : 'Private profile updated - only you can send letters to this address.'
+            });
           }
         );
       } else {
         // Create new penpal profile
         db.run(
-          `INSERT INTO celebrities (name, category, bio, fanmail_address, user_id, verified, popularity_score, is_public)
-           VALUES (?, ?, ?, ?, ?, 0, 0, 1)`,
-          [user.display_name, category || 'fan', bio, fanmail_address, user.id],
+          `INSERT INTO celebrities (name, category, bio, fanmail_address, user_id, verified, popularity_score, is_public, created_by_user_id, relationship_type)
+           VALUES (?, ?, ?, ?, ?, 0, 0, ?, ?, ?)`,
+          [user.display_name, category || 'fan', bio, fanmail_address, user.id, isPublic, user.id, 'self'],
           function(err) {
             if (err) {
               console.error('Penpal creation error:', err);
               return res.status(500).json({ error: 'Failed to create penpal profile' });
             }
-            res.json({ success: true, celebrity_id: this.lastID, message: 'Welcome to Celebrity Penpal!' });
+            res.json({ 
+              success: true, 
+              celebrity_id: this.lastID, 
+              is_public: isPublic,
+              message: isPublic ? 'Welcome to Celebrity Penpal! Your public profile is live.' : 'Private profile created - only you can send letters here.'
+            });
           }
         );
       }
     });
+  });
+});
+
+// Add family member / loved one (private by default)
+app.post('/api/add-family-member', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  const { name, fanmail_address, relationship_type, bio } = req.body;
+  
+  if (!token) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  if (!name || !fanmail_address) {
+    return res.status(400).json({ error: 'Name and address required' });
+  }
+  
+  db.get('SELECT * FROM users WHERE token = ?', [token], (err, user) => {
+    if (err || !user) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+    
+    // Create family member profile (always private - is_public = 0)
+    db.run(
+      `INSERT INTO celebrities (name, category, bio, fanmail_address, user_id, verified, popularity_score, is_public, created_by_user_id, relationship_type)
+       VALUES (?, ?, ?, ?, NULL, 0, 0, 0, ?, ?)`,
+      [name, 'family', bio || `${relationship_type || 'Family member'} of ${user.display_name}`, fanmail_address, user.id, relationship_type || 'family'],
+      function(err) {
+        if (err) {
+          console.error('Family member creation error:', err);
+          return res.status(500).json({ error: 'Failed to add family member' });
+        }
+        res.json({ 
+          success: true, 
+          celebrity_id: this.lastID,
+          name: name,
+          message: `${name} has been added to your private address book! You can now send them handwritten letters anytime.`
+        });
+      }
+    );
   });
 });
 
@@ -303,7 +361,63 @@ app.get('/api/my-penpal-profile', (req, res) => {
   });
 });
 
-// Get letters received by logged-in user
+// Get user's family members
+app.get('/api/my-family-members', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  
+  if (!token) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  db.get('SELECT * FROM users WHERE token = ?', [token], (err, user) => {
+    if (err || !user) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+    
+    db.all(
+      'SELECT * FROM celebrities WHERE created_by_user_id = ? AND relationship_type != "self" ORDER BY name',
+      [user.id],
+      (err, members) => {
+        if (err) {
+          return res.status(500).json({ error: 'Database error' });
+        }
+        res.json(members || []);
+      }
+    );
+  });
+});
+
+// Delete family member
+app.delete('/api/family-member/:id', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  const memberId = req.params.id;
+  
+  if (!token) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  db.get('SELECT * FROM users WHERE token = ?', [token], (err, user) => {
+    if (err || !user) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+    
+    db.run(
+      'DELETE FROM celebrities WHERE id = ? AND created_by_user_id = ? AND relationship_type != "self"',
+      [memberId, user.id],
+      function(err) {
+        if (err) {
+          return res.status(500).json({ error: 'Failed to delete' });
+        }
+        if (this.changes === 0) {
+          return res.status(404).json({ error: 'Family member not found' });
+        }
+        res.json({ success: true, message: 'Family member removed' });
+      }
+    );
+  });
+});
+
+// Get letters received by logged-in user (their penpal profile)
 app.get('/api/my-letters', (req, res) => {
   const token = req.headers.authorization?.replace('Bearer ', '');
   
@@ -335,11 +449,19 @@ app.get('/api/my-letters', (req, res) => {
   });
 });
 
-// API: Get celebrities (now includes user penpals)
+// API: Get celebrities (only public ones + user's own private ones)
 app.get('/api/celebrities', (req, res) => {
   const { category, search, limit = 20 } = req.query;
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  
   let query = 'SELECT * FROM celebrities WHERE is_public = 1';
   const params = [];
+  
+  // If user is logged in, also show their private profiles
+  if (token) {
+    query = 'SELECT * FROM celebrities WHERE is_public = 1 OR created_by_user_id = (SELECT id FROM users WHERE token = ?)';
+    params.push(token);
+  }
   
   if (category && category !== 'all') {
     query += ' AND category = ?';
@@ -351,7 +473,7 @@ app.get('/api/celebrities', (req, res) => {
     params.push(`%${search}%`);
   }
   
-  query += ' ORDER BY verified DESC, popularity_score DESC LIMIT ?';
+  query += ' ORDER BY verified DESC, popularity_score DESC, name LIMIT ?';
   params.push(parseInt(limit));
   
   db.all(query, params, (err, rows) => {
@@ -365,19 +487,37 @@ app.get('/api/celebrities', (req, res) => {
 
 // API: Get single celebrity
 app.get('/api/celebrities/:id', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  
   db.get('SELECT * FROM celebrities WHERE id = ?', [req.params.id], (err, row) => {
     if (err) {
       console.error('Database error:', err);
       return res.status(500).json({ error: 'Database error' });
     }
     if (!row) return res.status(404).json({ error: 'Celebrity not found' });
-    res.json(row);
+    
+    // Check if private profile belongs to logged-in user
+    if (!row.is_public) {
+      if (!token) {
+        return res.status(404).json({ error: 'Not found' });
+      }
+      
+      db.get('SELECT id FROM users WHERE token = ?', [token], (err, user) => {
+        if (err || !user || row.created_by_user_id !== user.id) {
+          return res.status(404).json({ error: 'Not found' });
+        }
+        res.json(row);
+      });
+    } else {
+      res.json(row);
+    }
   });
 });
 
 // API: Create letter order
 app.post('/api/letters', async (req, res) => {
   const { celebrity_id, customer_email, customer_name, message, handwriting_style, return_address, sender_name } = req.body;
+  const token = req.headers.authorization?.replace('Bearer ', '');
   
   if (!celebrity_id || !customer_email || !message) {
     return res.status(400).json({ error: 'Missing required fields' });
@@ -386,12 +526,30 @@ app.post('/api/letters', async (req, res) => {
   // Get celebrity details from database
   db.get('SELECT * FROM celebrities WHERE id = ?', [celebrity_id], async (err, celebrity) => {
     if (err || !celebrity) {
-      return res.status(404).json({ error: 'Celebrity not found' });
+      return res.status(404).json({ error: 'Recipient not found' });
+    }
+    
+    // Check if private profile - only creator can send
+    if (!celebrity.is_public) {
+      if (!token) {
+        return res.status(403).json({ error: 'Cannot send to this recipient' });
+      }
+      
+      const user = await new Promise((resolve, reject) => {
+        db.get('SELECT id FROM users WHERE token = ?', [token], (err, u) => {
+          if (err) reject(err);
+          else resolve(u);
+        });
+      });
+      
+      if (!user || celebrity.created_by_user_id !== user.id) {
+        return res.status(403).json({ error: 'Cannot send to this recipient' });
+      }
     }
     
     // Check if we have a valid address
     if (!celebrity.fanmail_address) {
-      return res.status(400).json({ error: 'No fanmail address available' });
+      return res.status(400).json({ error: 'No address available for this recipient' });
     }
     
     try {
@@ -572,7 +730,7 @@ function seedDatabase() {
         { name: "JK Rowling", category: "authors", address: "J.K. Rowling\nc/o Blair Partnership\nP.O. Box 77\nHaymarket House\nLondon SW1Y 4SP\nUnited Kingdom", popularity: 86 }
       ];
       
-      const stmt = db.prepare('INSERT OR IGNORE INTO celebrities (name, category, fanmail_address, verified, popularity_score, is_public) VALUES (?, ?, ?, 1, ?, 1)');
+      const stmt = db.prepare('INSERT OR IGNORE INTO celebrities (name, category, fanmail_address, verified, popularity_score, is_public, created_by_user_id, relationship_type) VALUES (?, ?, ?, 1, ?, 1, NULL, NULL)');
       seedData.forEach(c => stmt.run(c.name, c.category, c.address, c.popularity));
       stmt.finalize();
       console.log('Database seeded with', seedData.length, 'celebrities!');

@@ -3,24 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Celebrity Penpal</title>
+    <title>Log In - Celebrity Penpal</title>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Caveat:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <style>
         .auth-container {
-            max-width: 500px;
+            max-width: 400px;
             margin: 3rem auto;
             padding: 2rem;
             background: white;
-            border-radius: 30px;
-            box-shadow: 0 10px 40px rgba(255,182,193,0.3);
-        }
-        .auth-title {
-            font-family: 'Caveat', cursive;
-            font-size: 2.5rem;
-            color: #FF69B4;
-            text-align: center;
-            margin-bottom: 1.5rem;
+            border-radius: 25px;
+            box-shadow: 0 4px 20px rgba(255,182,193,0.3);
         }
         .form-group {
             margin-bottom: 1.5rem;
@@ -28,37 +21,24 @@
         .form-group label {
             display: block;
             margin-bottom: 0.5rem;
-            color: #4A4A4A;
             font-weight: 600;
         }
         .form-group input {
             width: 100%;
             padding: 1rem;
-            border: 2px solid #FFE4EC;
-            border-radius: 15px;
+            border: 2px solid #FFB6C1;
+            border-radius: 10px;
             font-size: 1rem;
-            font-family: 'Nunito', sans-serif;
         }
-        .form-group input:focus {
-            outline: none;
-            border-color: #FF69B4;
-        }
-        .auth-btn {
+        .btn-full {
             width: 100%;
-            padding: 1rem;
-            font-size: 1.1rem;
         }
         .auth-links {
             text-align: center;
             margin-top: 1.5rem;
         }
-        .auth-links a {
-            color: #FF69B4;
-            text-decoration: none;
-        }
         .error-message {
-            background: #FFE4EC;
-            color: #FF69B4;
+            background: #FFB6C1;
             padding: 1rem;
             border-radius: 10px;
             margin-bottom: 1rem;
@@ -73,66 +53,69 @@
             <h1 class="logo-text">Celebrity Penpal</h1>
         </div>
         <nav class="main-nav">
-            <a href="/" class="nav-link">← Back Home</a>
+            <a href="/" class="nav-link">← Home</a>
         </nav>
     </header>
 
-    <main class="auth-container">
-        <h2 class="auth-title">Welcome Back 💌</h2>
-        <div class="error-message" id="errorMsg"></div>
-        
-        <form id="loginForm">
-            <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" placeholder="you@example.com" required>
+    <main>
+        <div class="auth-container">
+            <h2 class="section-title" style="margin-bottom: 1.5rem;">Welcome Back 💌</h2>
+            
+            <div id="errorMessage" class="error-message"></div>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" placeholder="you@example.com" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" placeholder="Your password" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-full">Log In ✨</button>
+            </form>
+            
+            <div class="auth-links">
+                <p>Don't have an account? <a href="/signup" style="color: #FF69B4;">Sign up</a></p>
             </div>
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" placeholder="Your password" required>
-            </div>
-            <button type="submit" class="btn btn-primary auth-btn">Log In ✨</button>
-        </form>
-        
-        <div class="auth-links">
-            <p>Don't have an account? <a href="/signup">Sign up</a></p>
         </div>
     </main>
 
     <script>
-        // Check if already logged in
-        if (localStorage.getItem('token')) {
-            window.location.href = '/profile';
-        }
-        
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            const errorMsg = document.getElementById('errorMsg');
-            errorMsg.style.display = 'none';
-            
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
+            const data = {
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value
+            };
             
             try {
                 const response = await fetch('/api/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
+                    body: JSON.stringify(data)
                 });
                 
-                const data = await response.json();
+                const result = await response.json();
                 
-                if (data.success) {
-                    localStorage.setItem('token', data.token);
-                    localStorage.setItem('user', JSON.stringify(data));
-                    window.location.href = '/profile';
+                if (result.success) {
+                    localStorage.setItem('token', result.token);
+                    localStorage.setItem('user', JSON.stringify(result));
+                    
+                    // Check if there's a redirect
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const redirect = urlParams.get('redirect') || '/profile';
+                    window.location.href = redirect;
                 } else {
-                    errorMsg.textContent = data.error || 'Invalid email or password';
-                    errorMsg.style.display = 'block';
+                    document.getElementById('errorMessage').textContent = result.error || 'Invalid credentials';
+                    document.getElementById('errorMessage').style.display = 'block';
                 }
             } catch (error) {
-                errorMsg.textContent = 'Something went wrong. Please try again.';
-                errorMsg.style.display = 'block';
+                document.getElementById('errorMessage').textContent = 'Something went wrong. Please try again.';
+                document.getElementById('errorMessage').style.display = 'block';
             }
         });
     </script>

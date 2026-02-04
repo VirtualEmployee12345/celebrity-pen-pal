@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Your Profile - Celebrity Penpal</title>
+    <title>My Profile - Celebrity Penpal</title>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Caveat:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <style>
@@ -12,79 +12,99 @@
             margin: 2rem auto;
             padding: 2rem;
         }
-        .profile-header {
+        .profile-card {
             background: white;
-            padding: 2rem;
             border-radius: 25px;
-            box-shadow: 0 4px 20px rgba(255,182,193,0.3);
+            padding: 2rem;
             margin-bottom: 2rem;
+            box-shadow: 0 4px 20px rgba(255,182,193,0.3);
         }
-        .profile-header h2 {
-            font-family: 'Caveat', cursive;
-            font-size: 2.5rem;
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .profile-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #FFB6C1, #FF69B4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+        }
+        .profile-info h2 {
+            color: #FF69B4;
+            margin-bottom: 0.25rem;
+        }
+        .profile-info p {
+            color: #888;
+        }
+        .action-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        .action-card {
+            background: #FFE4EC;
+            padding: 1.5rem;
+            border-radius: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        .action-card:hover {
+            transform: translateY(-3px);
+        }
+        .action-card h4 {
             color: #FF69B4;
             margin-bottom: 0.5rem;
         }
-        .profile-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
+        .action-card p {
+            font-size: 0.9rem;
+            color: #666;
         }
-        .profile-card {
-            background: white;
-            padding: 2rem;
-            border-radius: 25px;
-            box-shadow: 0 4px 20px rgba(255,182,193,0.3);
-        }
-        .profile-card h3 {
-            color: #FF69B4;
-            margin-bottom: 1rem;
-            font-size: 1.5rem;
-        }
-        .status-badge {
-            display: inline-block;
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-weight: 600;
+        .family-list {
             margin-top: 1rem;
         }
-        .status-active {
-            background: #98FF98;
-            color: #2E8B57;
-        }
-        .status-inactive {
-            background: #FFE4EC;
-            color: #888;
-        }
-        .letter-count {
-            font-size: 3rem;
-            font-weight: 800;
-            color: #FF69B4;
+        .family-item {
+            background: #FFFACD;
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         .letters-list {
-            max-height: 300px;
-            overflow-y: auto;
-        }
-        .letter-item {
-            padding: 1rem;
-            border-bottom: 1px solid #FFE4EC;
-        }
-        .letter-item:last-child {
-            border-bottom: none;
-        }
-        .logout-btn {
-            background: none;
-            border: 2px solid #FF69B4;
-            color: #FF69B4;
-            padding: 0.5rem 1.5rem;
-            border-radius: 20px;
-            cursor: pointer;
-            font-weight: 600;
             margin-top: 1rem;
         }
-        .logout-btn:hover {
-            background: #FF69B4;
-            color: white;
+        .letter-item {
+            background: #E6E6FA;
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 0.5rem;
+        }
+        .letter-status {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            margin-left: 0.5rem;
+        }
+        .status-sent { background: #98FF98; }
+        .status-pending { background: #FFFACD; }
+        .btn-small {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: #888;
         }
     </style>
 </head>
@@ -95,125 +115,182 @@
             <h1 class="logo-text">Celebrity Penpal</h1>
         </div>
         <nav class="main-nav">
-            <a href="/" class="nav-link">Home</a>
-            <a href="#" class="nav-link" onclick="logout()">Logout</a>
+            <a href="/" class="nav-link">← Home</a>
+            <a href="#" class="nav-link" onclick="logout()">Log Out</a>
         </nav>
     </header>
 
     <main class="profile-container">
-        <div class="profile-header">
-            <h2 id="userName">Loading...</h2>
-            <p id="userEmail"></p>
-            <button class="logout-btn" onclick="logout()">Logout</button>
+        <!-- User Profile -->
+        <div class="profile-card">
+            <div class="profile-header">
+                <div class="profile-avatar">👤</div>
+                <div class="profile-info">
+                    <h2 id="userName">Loading...</h2>
+                    <p id="userEmail">...</p>
+                </div>
+            </div>
+            
+            <div class="action-grid">
+                <div class="action-card" onclick="location.href='/become-penpal'">
+                    <h4>💌 Become a Penpal</h4>
+                    <p>Receive letters from fans</p>
+                </div>
+                <div class="action-card" onclick="location.href='/add-family'">
+                    <h4>💝 Add Family</h4>
+                    <p>Sign up grandma or relatives</p>
+                </div>
+                <div class="action-card" onclick="location.href='/#browse'">
+                    <h4>✉️ Send Letter</h4>
+                    <p>Write to a celebrity</p>
+                </div>
+            </div>
         </div>
 
-        <div class="profile-grid">
-            <div class="profile-card">
-                <h3>🌟 Your Penpal Status</h3>
-                <div id="penpalStatus">
-                    <p>Loading...</p>
-                </div>
-                <div id="penpalAction"></div>
-            </div>
+        <!-- My Penpal Profile -->
+        <div class="profile-card" id="penpalProfile" style="display: none;">
+            <h3 style="color: #FF69B4; margin-bottom: 1rem;">My Penpal Profile</h3>
+            <div id="profileDetails"></div>
+        </div>
 
-            <div class="profile-card">
-                <h3>💌 Letters Received</h3>
-                <div class="letter-count" id="letterCount">0</div>
-                <p>people have sent you letters!</p>
-                <div class="letters-list" id="lettersList">
-                    <p style="color: #888; margin-top: 1rem;">No letters yet...</p>
-                </div>
+        <!-- Family Members -->
+        <div class="profile-card">
+            <h3 style="color: #FF69B4; margin-bottom: 1rem;">My Family & Friends</h3>
+            <div id="familySection" class="family-list">
+                <div class="empty-state">No family members added yet.<br><a href="/add-family" style="color: #FF69B4;">Add someone special 💝</a></div>
+            </div>
+        </div>
+
+        <!-- Letters Received -->
+        <div class="profile-card">
+            <h3 style="color: #FF69B4; margin-bottom: 1rem;">Letters Received</h3>
+            <div id="lettersSection" class="letters-list">
+                <div class="empty-state">No letters received yet.<br>Share your penpal profile to start receiving mail!</div>
             </div>
         </div>
     </main>
 
     <script>
         const token = localStorage.getItem('token');
-        
         if (!token) {
-            window.location.href = '/login';
+            window.location.href = '/login?redirect=/profile';
         }
-        
-        async function loadProfile() {
+
+        // Load user data
+        async function loadUser() {
             try {
-                // Get user info
-                const userRes = await fetch('/api/auth/me', {
-                    headers: { 'Authorization': 'Bearer ' + token }
+                const response = await fetch('/api/auth/me', {
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
                 
-                if (!userRes.ok) {
+                if (!response.ok) {
                     logout();
                     return;
                 }
                 
-                const user = await userRes.json();
-                document.getElementById('userName').textContent = `Hello, ${user.display_name}! ✨`;
+                const user = await response.json();
+                document.getElementById('userName').textContent = user.display_name || user.email;
                 document.getElementById('userEmail').textContent = user.email;
-                
-                // Get penpal profile
-                const profileRes = await fetch('/api/my-penpal-profile', {
-                    headers: { 'Authorization': 'Bearer ' + token }
+            } catch (error) {
+                console.error('Error loading user:', error);
+            }
+        }
+
+        // Load penpal profile
+        async function loadPenpalProfile() {
+            try {
+                const response = await fetch('/api/my-penpal-profile', {
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
                 
-                const profile = await profileRes.json();
-                const statusDiv = document.getElementById('penpalStatus');
-                const actionDiv = document.getElementById('penpalAction');
+                const profile = await response.json();
                 
                 if (profile) {
-                    statusDiv.innerHTML = `
-                        <span class="status-badge status-active">Active Penpal 🎉</span>
-                        <p style="margin-top: 1rem;">You're listed as: <strong>${profile.name}</strong></p>
-                        <p>Category: ${profile.category || 'Fan'}</p>
-                        ${profile.bio ? `<p>Bio: ${profile.bio}</p>` : ''}
-                    `;
-                    actionDiv.innerHTML = `
-                        <a href="/become-penpal" class="btn btn-secondary" style="margin-top: 1rem;">Edit Profile</a>
-                    `;
-                } else {
-                    statusDiv.innerHTML = `
-                        <span class="status-badge status-inactive">Not a penpal yet</span>
-                        <p style="margin-top: 1rem; color: #666;">
-                            Want to receive handwritten letters from fans? 
-                            Become a penpal and anyone can send you mail!
-                        </p>
-                    `;
-                    actionDiv.innerHTML = `
-                        <a href="/become-penpal" class="btn btn-primary" style="margin-top: 1rem;">Become a Penpal ✨</a>
+                    document.getElementById('penpalProfile').style.display = 'block';
+                    document.getElementById('profileDetails').innerHTML = `
+                        <p><strong>Name:</strong> ${profile.name}</p>
+                        <p><strong>Category:</strong> ${profile.category || 'Fan'}</p>
+                        <p><strong>Visibility:</strong> ${profile.is_public ? '🌐 Public - Anyone can send you letters' : '🔒 Private - Only you can send here'}</p>
+                        ${profile.bio ? `<p><strong>Bio:</strong> ${profile.bio}</p>` : ''}
+                        <button class="btn btn-secondary btn-small" onclick="location.href='/become-penpal'" style="margin-top: 1rem;">
+                            Edit Profile
+                        </button>
                     `;
                 }
-                
-                // Get received letters
-                const lettersRes = await fetch('/api/my-letters', {
-                    headers: { 'Authorization': 'Bearer ' + token }
-                });
-                
-                const letters = await lettersRes.json();
-                document.getElementById('letterCount').textContent = letters.length;
-                
-                if (letters.length > 0) {
-                    const lettersList = document.getElementById('lettersList');
-                    lettersList.innerHTML = letters.map(l => `
-                        <div class="letter-item">
-                            <p><strong>From:</strong> ${l.customer_name || 'Anonymous'}</p>
-                            <p style="font-size: 0.9rem; color: #888; margin-top: 0.5rem;">
-                                ${new Date(l.created_at).toLocaleDateString()} • Status: ${l.status}
-                            </p>
-                        </div>
-                    `).join('');
-                }
-                
             } catch (error) {
                 console.error('Error loading profile:', error);
             }
         }
-        
+
+        // Load family members
+        async function loadFamily() {
+            try {
+                const response = await fetch('/api/my-family-members', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const members = await response.json();
+                
+                if (members.length > 0) {
+                    document.getElementById('familySection').innerHTML = members.map(m => `
+                        <div class="family-item">
+                            <div>
+                                <strong>${m.name}</strong>
+                                <span style="color: #888; margin-left: 0.5rem;">${m.relationship_type || 'Family'}</span>
+                            </div>
+                            <button class="btn btn-primary btn-small" onclick="writeTo('${m.id}', '${m.name}')">
+                                Write ✉️
+                            </button>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading family:', error);
+            }
+        }
+
+        // Load received letters
+        async function loadLetters() {
+            try {
+                const response = await fetch('/api/my-letters', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const letters = await response.json();
+                
+                if (letters.length > 0) {
+                    document.getElementById('lettersSection').innerHTML = letters.map(l => `
+                        <div class="letter-item">
+                            <strong>From:</strong> ${l.customer_name || 'Anonymous'}
+                            <span class="letter-status status-${l.status}">${l.status}</span>
+                            <p style="margin-top: 0.5rem; color: #666; font-size: 0.9rem;">
+                                "${l.message.substring(0, 100)}${l.message.length > 100 ? '...' : ''}"
+                            </p>
+                            <small style="color: #888;">${new Date(l.created_at).toLocaleDateString()}</small>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading letters:', error);
+            }
+        }
+
+        function writeTo(id, name) {
+            localStorage.setItem('selectedRecipient', JSON.stringify({ id, name }));
+            window.location.href = '/?recipient=' + id;
+        }
+
         function logout() {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             window.location.href = '/';
         }
-        
-        loadProfile();
+
+        // Load everything
+        loadUser();
+        loadPenpalProfile();
+        loadFamily();
+        loadLetters();
     </script>
 </body>
 </html>

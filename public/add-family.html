@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Family Member - Celebrity Penpal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Caveat:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .form-container {
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 25px;
+            box-shadow: 0 4px 20px rgba(255,182,193,0.3);
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #4A4A4A;
+        }
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid #FFB6C1;
+            border-radius: 10px;
+            font-family: 'Nunito', sans-serif;
+            font-size: 1rem;
+        }
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        .btn-full {
+            width: 100%;
+            margin-top: 1rem;
+        }
+        .success-message {
+            background: #98FF98;
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        .error-message {
+            background: #FFB6C1;
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        .family-list {
+            margin-top: 2rem;
+        }
+        .family-item {
+            background: #FFE4EC;
+            padding: 1rem;
+            border-radius: 15px;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .family-info h4 {
+            color: #FF69B4;
+            margin-bottom: 0.25rem;
+        }
+        .family-info small {
+            color: #888;
+        }
+        .btn-small {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
+        .info-box {
+            background: #FFFACD;
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <header class="site-header">
+        <div class="logo-container">
+            <div class="logo-icon">💌</div>
+            <h1 class="logo-text">Celebrity Penpal</h1>
+        </div>
+        <nav class="main-nav">
+            <a href="/" class="nav-link">← Home</a>
+            <a href="/profile" class="nav-link">Profile</a>
+        </nav>
+    </header>
+
+    <main style="padding: 2rem;">
+        <div class="form-container">
+            <h2 class="section-title" style="margin-bottom: 1rem;">Add Family Member 💝</h2>
+            
+            <div class="info-box">
+                <strong>Perfect for:</strong> Grandparents, parents, relatives, or friends who aren't tech-savvy. 
+                Sign them up once, then send them handwritten letters anytime!
+            </div>
+            
+            <div id="successMessage" class="success-message"></div>
+            <div id="errorMessage" class="error-message"></div>
+            
+            <form id="familyForm">
+                <div class="form-group">
+                    <label for="name">Their Name *</label>
+                    <input type="text" id="name" name="name" placeholder="e.g., Grandma Rose" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="relationship">Relationship *</label>
+                    <select id="relationship" name="relationship_type" required>
+                        <option value="">Select relationship...</option>
+                        <option value="grandmother">Grandmother</option>
+                        <option value="grandfather">Grandfather</option>
+                        <option value="mother">Mother</option>
+                        <option value="father">Father</option>
+                        <option value="sister">Sister</option>
+                        <option value="brother">Brother</option>
+                        <option value="aunt">Aunt</option>
+                        <option value="uncle">Uncle</option>
+                        <option value="cousin">Cousin</option>
+                        <option value="friend">Friend</option>
+                        <option value="partner">Partner / Spouse</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="fanmailAddress">Their Mailing Address *</label>
+                    <textarea id="fanmailAddress" name="fanmail_address" placeholder="Grandma Rose&#10;456 Oak Street&#10;Springfield, IL 62701" required></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="bio">Notes (Optional)</label>
+                    <input type="text" id="bio" name="bio" placeholder="e.g., Loves gardening and crossword puzzles">
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-full">
+                    Add to My Address Book ✨
+                </button>
+            </form>
+            
+            <div class="family-list" id="familyList" style="display: none;">
+                <h3>Your Private Address Book</h3>
+                <div id="familyMembers"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/login?redirect=/add-family';
+        }
+        
+        // Load existing family members
+        async function loadFamilyMembers() {
+            try {
+                const response = await fetch('/api/my-family-members', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const members = await response.json();
+                
+                if (members.length > 0) {
+                    document.getElementById('familyList').style.display = 'block';
+                    document.getElementById('familyMembers').innerHTML = members.map(m => `
+                        <div class="family-item" data-id="${m.id}">
+                            <div class="family-info">
+                                <h4>${m.name}</h4>
+                                <small>${m.relationship_type || 'Family'}</small>
+                            </div>
+                            <button class="btn btn-secondary btn-small" onclick="sendLetter(${m.id}, '${m.name}')">
+                                Write Letter ✉️
+                            </button>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading family members:', error);
+            }
+        }
+        
+        loadFamilyMembers();
+        
+        // Handle form submission
+        document.getElementById('familyForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                name: document.getElementById('name').value,
+                relationship_type: document.getElementById('relationship').value,
+                fanmail_address: document.getElementById('fanmailAddress').value,
+                bio: document.getElementById('bio').value
+            };
+            
+            try {
+                const response = await fetch('/api/add-family-member', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('successMessage').textContent = result.message;
+                    document.getElementById('successMessage').style.display = 'block';
+                    document.getElementById('errorMessage').style.display = 'none';
+                    document.getElementById('familyForm').reset();
+                    
+                    // Reload family list
+                    loadFamilyMembers();
+                } else {
+                    document.getElementById('errorMessage').textContent = result.error || 'Something went wrong';
+                    document.getElementById('errorMessage').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('errorMessage').textContent = 'Failed to add family member. Please try again.';
+                document.getElementById('errorMessage').style.display = 'block';
+            }
+        });
+        
+        function sendLetter(id, name) {
+            // Store selected recipient and redirect to home
+            localStorage.setItem('selectedRecipient', JSON.stringify({ id, name }));
+            window.location.href = '/?recipient=' + id;
+        }
+    </script>
+</body>
+</html>
