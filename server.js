@@ -47,6 +47,17 @@ const db = new sqlite3.Database(dbPath, (err) => {
   console.log('Connected to SQLite database');
 });
 
+function logDbStatus(context) {
+  const exists = fs.existsSync(dbPath);
+  let size = 0;
+  try {
+    size = exists ? fs.statSync(dbPath).size : 0;
+  } catch (err) {
+    console.error(`[${context}] Failed to read db stats:`, err);
+  }
+  console.log(`[${context}] DB file exists:`, exists, 'size:', size);
+}
+
 db.serialize(() => {
   // Users table for authentication
   db.run(`CREATE TABLE IF NOT EXISTS users (
@@ -110,6 +121,15 @@ db.serialize(() => {
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (topic_id) REFERENCES forum_topics(id)
   )`);
+
+  logDbStatus('db-init');
+  db.get('SELECT COUNT(*) as count FROM celebrities', (err, row) => {
+    if (err) {
+      console.error('[db-init] Error counting celebrities:', err);
+      return;
+    }
+    console.log('[db-init] Celebrity count:', row ? row.count : 'unknown');
+  });
 });
 
 // Middleware
@@ -453,13 +473,26 @@ app.get('/api/my-letters', (req, res) => {
 app.get('/api/celebrities', (req, res) => {
   const { category, search, limit = 20 } = req.query;
   const token = req.headers.authorization?.replace('Bearer ', '');
-  
+
+  console.log('[api/celebrities] request', {
+    category,
+    search,
+    limit,
+    hasToken: Boolean(token)
+  });
+
+  const limitValue = Number.parseInt(limit, 10);
+  const safeLimit = Number.isNaN(limitValue) ? 20 : Math.max(1, Math.min(limitValue, 100));
+
   let query = 'SELECT * FROM celebrities WHERE is_public = 1';
   const params = [];
-  
-  // If user is logged in, also show their private profiles
-  // MUST use parentheses around OR condition for proper SQL precedence
-  if (token) {
+
+  // Temporarily simplify query to isolate token-related errors.
+  // Toggle back by setting CELEB_SIMPLE_QUERY=0 in the environment.
+  const useSimpleQuery = process.env.CELEB_SIMPLE_QUERY !== '0';
+  if (!useSimpleQuery && token) {
+    // If user is logged in, also show their private profiles
+    // MUST use parentheses around OR condition for proper SQL precedence
     query = 'SELECT * FROM celebrities WHERE (is_public = 1 OR created_by_user_id = (SELECT id FROM users WHERE token = ?))';
     params.push(token);
   }
@@ -475,7 +508,7 @@ app.get('/api/celebrities', (req, res) => {
   }
   
   query += ' ORDER BY verified DESC, popularity_score DESC, name LIMIT ?';
-  params.push(parseInt(limit));
+  params.push(safeLimit);
   
   console.log('Executing query:', query);
   console.log('With params:', params);
@@ -483,6 +516,14 @@ app.get('/api/celebrities', (req, res) => {
   db.all(query, params, (err, rows) => {
     if (err) {
       console.error('Database error in /api/celebrities:', err);
+      logDbStatus('api/celebrities-error');
+      db.get('SELECT COUNT(*) as count FROM celebrities', (countErr, row) => {
+        if (countErr) {
+          console.error('[api/celebrities-error] Count failed:', countErr);
+        } else {
+          console.log('[api/celebrities-error] Celebrity count:', row ? row.count : 'unknown');
+        }
+      });
       return res.status(500).json({ error: 'Database error', details: err.message });
     }
     res.json(rows);
@@ -749,6 +790,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`Celebrity Penpal server running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`Data directory: ${dataDir}`);
+  logDbStatus('startup');
   
   // Seed after server starts
   setTimeout(seedDatabase, 1000);
