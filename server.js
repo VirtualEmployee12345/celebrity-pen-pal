@@ -1,13 +1,21 @@
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const sqlite3 = require('sqlite3').verbose();
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Ensure data directory exists
+const dataDir = path.join(__dirname, 'data');
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
+
 // Database setup
-const db = new sqlite3.Database('./data/celebrity-pen-pal.db');
+const dbPath = path.join(dataDir, 'celebrity-pen-pal.db');
+const db = new sqlite3.Database(dbPath);
 
 db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS celebrities (
@@ -203,6 +211,25 @@ app.post('/api/forum/topics/:id/replies', (req, res) => {
     res.json({ success: true, reply_id: this.lastID });
   });
   stmt.finalize();
+});
+
+// Seed database if empty
+db.get('SELECT COUNT(*) as count FROM celebrities', (err, row) => {
+  if (err || !row || row.count === 0) {
+    console.log('Seeding database with initial celebrities...');
+    const seedData = [
+      { name: "Taylor Swift", category: "musicians", address: "Taylor Swift\n13 Management\n718 Thompson Lane\nSuite 108256\nNashville, TN 37204-3923", popularity: 100 },
+      { name: "Tom Hanks", category: "actors", address: "Tom Hanks\nPlaytone\n11812 W. Olympic Blvd.\nSuite 300\nLos Angeles, CA 90064", popularity: 95 },
+      { name: "Leonardo DiCaprio", category: "actors", address: "Leonardo DiCaprio\nAppian Way Productions\n9601 Wilshire Blvd.\n3rd Floor\nBeverly Hills, CA 90210", popularity: 90 },
+      { name: "Oprah Winfrey", category: "influencers", address: "Oprah Winfrey\nHarpo Productions\n1041 N. Formosa Ave.\nWest Hollywood, CA 90046", popularity: 88 },
+      { name: "Dwayne Johnson", category: "actors", address: "Dwayne Johnson\nSeven Bucks Productions\n9601 Wilshire Blvd.\n3rd Floor\nBeverly Hills, CA 90210", popularity: 92 }
+    ];
+    
+    const stmt = db.prepare('INSERT OR IGNORE INTO celebrities (name, category, fanmail_address, verified, popularity_score) VALUES (?, ?, ?, 1, ?)');
+    seedData.forEach(c => stmt.run(c.name, c.category, c.address, c.popularity));
+    stmt.finalize();
+    console.log('Database seeded!');
+  }
 });
 
 app.listen(PORT, () => {
