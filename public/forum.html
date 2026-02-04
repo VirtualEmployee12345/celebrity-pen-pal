@@ -1,0 +1,39 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Celebrity Pen Pal Forum</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <h1>Celebrity Pen Pal Forum</h1>
+  </header>
+  <main>
+    <section id="topics">
+      <h2>Topics</h2>
+      <ul id="topic-list">
+        <!-- Topics will be dynamically loaded here -->
+      </ul>
+      <form id="create-topic-form">
+        <input type="text" id="topic-title" placeholder="Topic Title" required>
+        <textarea id="topic-content" placeholder="Topic Content" required></textarea>
+        <button type="submit">Create Topic</button>
+      </form>
+    </section>
+    <section id="posts" style="display: none;">
+      <h2 id="post-topic-title"></h2>
+      <ul id="post-list">
+        <!-- Posts will be dynamically loaded here -->
+      </ul>
+      <form id="create-post-form">
+        <textarea id="post-content" placeholder="Your Reply" required></textarea>
+        <button type="submit">Reply</button>
+      </form>
+    </section>
+  </main>
+  <script src="js/forum.js"></script>
+</body>
+</html>

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Celebrity Pen Pal ✨ Send Love to the Stars</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Caveat:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Floating stars background -->
+    <div class="stars-bg">
+        <div class="star">✦</div>
+        <div class="star">✧</div>
+        <div class="star">★</div>
+        <div class="star">✦</div>
+        <div class="star">✧</div>
+    </div>
+
+    <!-- Header -->
+    <header class="site-header">
+        <div class="logo-container">
+            <div class="logo-icon">💌</div>
+            <h1 class="logo-text">Celebrity Pen Pal</h1>
+        </div>
+        <nav class="main-nav">
+            <a href="#browse" class="nav-link">Browse Stars</a>
+            <a href="#forum" class="nav-link">Community</a>
+            <a href="#about" class="nav-link">How It Works</a>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <h2 class="hero-title">Send a Little Magic ✨</h2>
+            <p class="hero-subtitle">Handwritten letters to your favorite celebrities.<br>Real ink. Real paper. Real connection.</p>
+            <div class="hero-cta">
+                <input type="text" class="search-input" id="heroSearch" placeholder="Who do you want to write to?">
+                <button class="btn btn-primary" onclick="searchCelebrities()">Find Them ✨</button>
+            </div>
+        </div>
+        <div class="hero-decoration">
+            <div class="floating-letter">💌</div>
+            <div class="floating-heart">💖</div>
+            <div class="floating-star">⭐</div>
+        </div>
+    </section>
+
+    <!-- Categories -->
+    <section class="categories">
+        <h3 class="section-title">Pick a Category 🌟</h3>
+        <div class="category-grid">
+            <button class="category-btn active" data-category="all">All Stars</button>
+            <button class="category-btn" data-category="actors">🎬 Actors</button>
+            <button class="category-btn" data-category="musicians">🎵 Musicians</button>
+            <button class="category-btn" data-category="athletes">🏆 Athletes</button>
+            <button class="category-btn" data-category="influencers">📱 Creators</button>
+            <button class="category-btn" data-category="authors">📚 Authors</button>
+        </div>
+    </section>
+
+    <!-- Celebrities Grid -->
+    <section class="celebrities" id="browse">
+        <h3 class="section-title">Featured Stars 💫</h3>
+        <div class="celebrity-grid" id="celebrityGrid">
+            <!-- Loaded dynamically -->
+            <div class="loading">Loading stars... ✨</div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="how-it-works" id="about">
+        <h3 class="section-title">How It Works 📝</h3>
+        <div class="steps">
+            <div class="step">
+                <div class="step-icon">1️⃣</div>
+                <h4>Pick a Star</h4>
+                <p>Browse our curated list of celebrities with verified addresses</p>
+            </div>
+            <div class="step-arrow">→</div>
+            <div class="step">
+                <div class="step-icon">2️⃣</div>
+                <h4>Write Your Letter</h4>
+                <p>Type your message and choose a handwriting style</p>
+            </div>
+            <div class="step-arrow">→</div>
+            <div class="step">
+                <div class="step-icon">3️⃣</div>
+                <h4>We Write & Send</h4>
+                <p>Our robots (or humans!) handwrite and mail it for you</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Forum Preview -->
+    <section class="forum-preview" id="forum">
+        <h3 class="section-title">Community 💬</h3>
+        <div class="forum-topics" id="forumTopics">
+            <div class="loading">Loading discussions... 💭</div>
+        </div>
+        <a href="/forum.html" class="btn btn-secondary">Join the Conversation</a>
+    </section>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <p>Made with 💌 by Celebrity Pen Pal</p>
+        <p class="footer-links">
+            <a href="#">Privacy</a> • 
+            <a href="#">Terms</a> • 
+            <a href="#">Contact</a>
+        </p>
+    </footer>
+
+    <!-- Letter Modal -->
+    <div class="modal" id="letterModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">×</button>
+            <div class="modal-body">
+                <div class="celebrity-header">
+                    <img src="" alt="" class="celebrity-avatar" id="modalAvatar">
+                    <div class="celebrity-info">
+                        <h3 id="modalName">Celebrity Name</h3>
+                        <span class="celebrity-category" id="modalCategory">Category</span>
+                    </div>
+                </div>
+                <div class="letter-form">
+                    <label>Your Message</label>
+                    <textarea class="letter-textarea" id="letterMessage" placeholder="Write something sweet..." rows="6"></textarea>
+                    
+                    <label>Handwriting Style</label>
+                    <div class="handwriting-options">
+                        <button class="handwriting-btn active" data-style="casual">Casual ✏️</button>
+                        <button class="handwriting-btn" data-style="elegant">Elegant 🖋️</button>
+                        <button class="handwriting-btn" data-style="playful">Playful 🎨</button>
+                    </div>
+                    
+                    <label>Your Email</label>
+                    <input type="email" class="form-input" id="customerEmail" placeholder="you@example.com">
+                    
+                    <div class="price-tag">$4.99 per letter</div>
+                    <button class="btn btn-primary btn-full" onclick="submitLetter()">Send Letter 💌</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

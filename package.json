@@ -1,0 +1,21 @@
+{
+  "name": "celebrity-pen-pal",
+  "version": "1.0.0",
+  "description": "Send handwritten letters to celebrities",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "scrape": "node scripts/scrape-fanmail.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.6.0",
+    "sqlite3": "^5.1.6",
+    "stripe": "^14.10.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}
