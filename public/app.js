@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadForumTopics();
     setupCategoryFilters();
     setupHandwritingSelection();
+    setupMobileNav();
 });
 
 // Load celebrities from API
@@ -176,6 +177,26 @@ function setupHandwritingSelection() {
                 textarea.style.fontFamily = "'Caveat', cursive";
                 textarea.style.fontStyle = 'normal';
             }
+        });
+    });
+}
+
+// Mobile nav toggle
+function setupMobileNav() {
+    const navToggle = document.getElementById('navToggle');
+    const mainNav = document.getElementById('mainNav');
+
+    if (!navToggle || !mainNav) return;
+
+    navToggle.addEventListener('click', () => {
+        const isOpen = mainNav.classList.toggle('is-open');
+        navToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+
+    mainNav.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', () => {
+            mainNav.classList.remove('is-open');
+            navToggle.setAttribute('aria-expanded', 'false');
         });
     });
 }

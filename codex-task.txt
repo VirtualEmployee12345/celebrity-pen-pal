@@ -1,0 +1,20 @@
+Fix two issues on Celebrity Penpal website:
+
+ISSUE 1: /api/celebrities returns 500 error
+- Add debug logging to API endpoint
+- Simplify query to: SELECT * FROM celebrities WHERE is_public=1 LIMIT 20
+- Remove all token/user logic temporarily
+- Ensure seedDatabase creates 15 celebrities
+- Log all errors with details
+
+ISSUE 2: Mobile navigation broken
+- Fix index.html nav structure
+- Add hamburger menu for mobile
+- Make logo fit on small screens
+- Add CSS for mobile nav (@media max-width 768px)
+- Add JavaScript to toggle mobile menu
+- Ensure 44px touch targets
+
+FILES: server.js, public/index.html, public/style.css, public/app.js
+
+When done, run: openclaw gateway wake --text "Codex done: Fixed API and mobile nav" --mode now

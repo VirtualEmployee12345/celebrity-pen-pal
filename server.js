@@ -471,55 +471,28 @@ app.get('/api/my-letters', (req, res) => {
 
 // API: Get celebrities (only public ones + user's own private ones)
 app.get('/api/celebrities', (req, res) => {
-  const { category, search, limit = 20 } = req.query;
-  const token = req.headers.authorization?.replace('Bearer ', '');
-
   console.log('[api/celebrities] request', {
-    category,
-    search,
-    limit,
-    hasToken: Boolean(token)
+    path: req.path,
+    query: req.query,
+    ip: req.ip
   });
 
-  const limitValue = Number.parseInt(limit, 10);
-  const safeLimit = Number.isNaN(limitValue) ? 20 : Math.max(1, Math.min(limitValue, 100));
+  const query = 'SELECT * FROM celebrities WHERE is_public = 1 LIMIT 20';
+  console.log('[api/celebrities] Executing query:', query);
 
-  let query = 'SELECT * FROM celebrities WHERE is_public = 1';
-  const params = [];
-
-  // Temporarily simplify query to isolate token-related errors.
-  // Toggle back by setting CELEB_SIMPLE_QUERY=0 in the environment.
-  const useSimpleQuery = process.env.CELEB_SIMPLE_QUERY !== '0';
-  if (!useSimpleQuery && token) {
-    // If user is logged in, also show their private profiles
-    // MUST use parentheses around OR condition for proper SQL precedence
-    query = 'SELECT * FROM celebrities WHERE (is_public = 1 OR created_by_user_id = (SELECT id FROM users WHERE token = ?))';
-    params.push(token);
-  }
-  
-  if (category && category !== 'all') {
-    query += ' AND category = ?';
-    params.push(category);
-  }
-  
-  if (search) {
-    query += ' AND name LIKE ?';
-    params.push(`%${search}%`);
-  }
-  
-  query += ' ORDER BY verified DESC, popularity_score DESC, name LIMIT ?';
-  params.push(safeLimit);
-  
-  console.log('Executing query:', query);
-  console.log('With params:', params);
-  
-  db.all(query, params, (err, rows) => {
+  db.all(query, [], (err, rows) => {
     if (err) {
-      console.error('Database error in /api/celebrities:', err);
+      console.error('[api/celebrities] Database error:', {
+        message: err.message,
+        stack: err.stack
+      });
       logDbStatus('api/celebrities-error');
       db.get('SELECT COUNT(*) as count FROM celebrities', (countErr, row) => {
         if (countErr) {
-          console.error('[api/celebrities-error] Count failed:', countErr);
+          console.error('[api/celebrities-error] Count failed:', {
+            message: countErr.message,
+            stack: countErr.stack
+          });
         } else {
           console.log('[api/celebrities-error] Celebrity count:', row ? row.count : 'unknown');
         }
