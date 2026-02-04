@@ -537,28 +537,40 @@ app.get('/api/my-letters', (req, res) => {
   });
 });
 
-// API: Get celebrities (only public ones + user's own private ones)
+// In-memory fallback celebrities (for when Render disk isn't persistent)
+const FALLBACK_CELEBRITIES = [
+  { id: 1, name: "Taylor Swift", category: "musicians", image_url: null, bio: null, fanmail_address: "Taylor Swift\n13 Management\n718 Thompson Lane\nSuite 108256\nNashville, TN 37204-3923", verified: 1, popularity_score: 100, is_public: 1, user_id: null, created_by_user_id: null, relationship_type: null },
+  { id: 2, name: "Tom Hanks", category: "actors", image_url: null, bio: null, fanmail_address: "Tom Hanks\nPlaytone\n11812 W. Olympic Blvd.\nSuite 300\nLos Angeles, CA 90064", verified: 1, popularity_score: 95, is_public: 1, user_id: null, created_by_user_id: null, relationship_type: null },
+  { id: 3, name: "Leonardo DiCaprio", category: "actors", image_url: null, bio: null, fanmail_address: "Leonardo DiCaprio\nAppian Way Productions\n9601 Wilshire Blvd.\n3rd Floor\nBeverly Hills, CA 90210", verified: 1, popularity_score: 90, is_public: 1, user_id: null, created_by_user_id: null, relationship_type: null },
+  { id: 4, name: "Oprah Winfrey", category: "influencers", image_url: null, bio: null, fanmail_address: "Oprah Winfrey\nHarpo Productions\n1041 N. Formosa Ave.\nWest Hollywood, CA 90046", verified: 1, popularity_score: 88, is_public: 1, user_id: null, created_by_user_id: null, relationship_type: null },
+  { id: 5, name: "Dwayne Johnson", category: "actors", image_url: null, bio: null, fanmail_address: "Dwayne Johnson\nSeven Bucks Productions\n9601 Wilshire Blvd.\n3rd Floor\nBeverly Hills, CA 90210", verified: 1, popularity_score: 92, is_public: 1, user_id: null, created_by_user_id: null, relationship_type: null },
+  { id: 6, name: "Beyoncé", category: "musicians", image_url: null, bio: null, fanmail_address: "Beyoncé\nParkwood Entertainment\n1230 Avenue of the Americas\nSuite 2400\nNew York, NY 10020", verified: 1, popularity_score: 98, is_public: 1, user_id: null, created_by_user_id: null, relationship_type: null },
+  { id: 7, name: "Robert Downey Jr.", category: "actors", image_url: null, bio: null, fanmail_address: "Robert Downey Jr.\nTeam Downey\n9601 Wilshire Blvd.\n3rd Floor\nBeverly Hills, CA 90210", verified: 1, popularity_score: 85, is_public: 1, user_id: null, created_by_user_id: null, relationship_type: null },
+  { id: 8, name: "Serena Williams", category: "athletes", image_url: null, bio: null, fanmail_address: "Serena Williams\nWilliam Morris Endeavor\n9601 Wilshire Blvd.\nBeverly Hills, CA 90210", verified: 1, popularity_score: 80, is_public: 1, user_id: null, created_by_user_id: null, relationship_type: null },
+  { id: 9, name: "Elon Musk", category: "influencers", image_url: null, bio: null, fanmail_address: "Elon Musk\nc/o Tesla, Inc.\n3500 Deer Creek Road\nPalo Alto, CA 94304", verified: 1, popularity_score: 95, is_public: 1, user_id: null, created_by_user_id: null, relationship_type: null },
+  { id: 10, name: "Emma Watson", category: "actors", image_url: null, bio: null, fanmail_address: "Emma Watson\nWilliam Morris Endeavor\n9601 Wilshire Blvd.\nBeverly Hills, CA 90210", verified: 1, popularity_score: 82, is_public: 1, user_id: null, created_by_user_id: null, relationship_type: null },
+  { id: 11, name: "Drake", category: "musicians", image_url: null, bio: null, fanmail_address: "Drake\nOVO Sound\n1815 Ironstone Manor\nPickering, ON L1W 3J9\nCanada", verified: 1, popularity_score: 88, is_public: 1, user_id: null, created_by_user_id: null, relationship_type: null },
+  { id: 12, name: "Stephen King", category: "authors", image_url: null, bio: null, fanmail_address: "Stephen King\nP.O. Box 772\nBangor, ME 04402", verified: 1, popularity_score: 85, is_public: 1, user_id: null, created_by_user_id: null, relationship_type: null },
+  { id: 13, name: "LeBron James", category: "athletes", image_url: null, bio: null, fanmail_address: "LeBron James\nKlutch Sports Group\n8228 Sunset Blvd.\nLos Angeles, CA 90046", verified: 1, popularity_score: 90, is_public: 1, user_id: null, created_by_user_id: null, relationship_type: null },
+  { id: 14, name: "MrBeast", category: "influencers", image_url: null, bio: null, fanmail_address: "MrBeast\nMrBeast LLC\nP.O. Box 1058\nGreenville, NC 27835", verified: 1, popularity_score: 87, is_public: 1, user_id: null, created_by_user_id: null, relationship_type: null },
+  { id: 15, name: "JK Rowling", category: "authors", image_url: null, bio: null, fanmail_address: "J.K. Rowling\nc/o Blair Partnership\nP.O. Box 77\nHaymarket House\nLondon SW1Y 4SP\nUnited Kingdom", verified: 1, popularity_score: 86, is_public: 1, user_id: null, created_by_user_id: null, relationship_type: null }
+];
+
+// API: Get celebrities (with fallback for Render free tier issues)
 app.get('/api/celebrities', (req, res) => {
-  console.log('[api/celebrities] request', {
-    path: req.path,
-    query: req.query,
-    ip: req.ip
-  });
-
-  // SIMPLIFIED: Just get all celebrities, no filters
   const query = 'SELECT * FROM celebrities LIMIT 25';
-  console.log('[api/celebrities] Executing:', query);
-
+  
   db.all(query, (err, rows) => {
     if (err) {
-      console.error('[api/celebrities] ERROR:', err.message);
-      return res.status(500).json({ 
-        error: 'Database error', 
-        details: err.message,
-        hint: 'Visit /api/debug/db-status for diagnostics'
-      });
+      console.error('[api/celebrities] DB ERROR - using fallback:', err.message);
+      return res.json(FALLBACK_CELEBRITIES);
     }
-    console.log('[api/celebrities] SUCCESS: returned', rows.length, 'rows');
+    
+    if (!rows || rows.length === 0) {
+      console.log('[api/celebrities] DB empty - using fallback');
+      return res.json(FALLBACK_CELEBRITIES);
+    }
+    
     res.json(rows);
   });
 });
