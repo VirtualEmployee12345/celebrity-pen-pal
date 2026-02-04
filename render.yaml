@@ -11,6 +11,8 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: RENDER
+        value: "true"
       - key: HANDWRYTTEN_API_KEY
         sync: false
       - key: HANDWRYTTEN_API_SECRET
