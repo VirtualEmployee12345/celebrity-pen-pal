@@ -2,10 +2,21 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const sqlite3 = require('sqlite3').verbose();
+const crypto = require('crypto');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Simple password hashing
+function hashPassword(password) {
+  return crypto.createHash('sha256').update(password).digest('hex');
+}
+
+// Generate a simple session token
+function generateToken() {
+  return crypto.randomBytes(32).toString('hex');
+}
 
 // Determine data directory (Render uses /opt/render/project/src/data with disk)
 const dataDir = process.env.RENDER ? '/opt/render/project/src/data' : path.join(__dirname, 'data');
@@ -18,7 +29,6 @@ try {
   }
 } catch (err) {
   console.error('Failed to create data directory:', err);
-  // Fallback to local data dir
   const fallbackDir = path.join(__dirname, 'data');
   if (!fs.existsSync(fallbackDir)) {
     fs.mkdirSync(fallbackDir, { recursive: true });
@@ -38,6 +48,19 @@ const db = new sqlite3.Database(dbPath, (err) => {
 });
 
 db.serialize(() => {
+  // Users table for authentication
+  db.run(`CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    display_name TEXT,
+    bio TEXT,
+    avatar_url TEXT,
+    token TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+  
+  // Updated celebrities table - can be official celebs OR user penpals
   db.run(`CREATE TABLE IF NOT EXISTS celebrities (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -47,24 +70,24 @@ db.serialize(() => {
     fanmail_address TEXT,
     verified BOOLEAN DEFAULT 0,
     popularity_score INTEGER DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`, (err) => {
-    if (err) console.error('Error creating celebrities table:', err);
-  });
+    user_id INTEGER,
+    is_public BOOLEAN DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )`);
   
   db.run(`CREATE TABLE IF NOT EXISTS letters (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     celebrity_id INTEGER,
     customer_email TEXT,
+    customer_name TEXT,
     message TEXT,
     handwriting_style TEXT,
     status TEXT DEFAULT 'pending',
     handwrytten_order_id TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (celebrity_id) REFERENCES celebrities(id)
-  )`, (err) => {
-    if (err) console.error('Error creating letters table:', err);
-  });
+  )`);
   
   db.run(`CREATE TABLE IF NOT EXISTS forum_topics (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -74,9 +97,7 @@ db.serialize(() => {
     content TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (celebrity_id) REFERENCES celebrities(id)
-  )`, (err) => {
-    if (err) console.error('Error creating forum_topics table:', err);
-  });
+  )`);
   
   db.run(`CREATE TABLE IF NOT EXISTS forum_replies (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -85,9 +106,7 @@ db.serialize(() => {
     content TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (topic_id) REFERENCES forum_topics(id)
-  )`, (err) => {
-    if (err) console.error('Error creating forum_replies table:', err);
-  });
+  )`);
 });
 
 // Middleware
@@ -95,9 +114,28 @@ app.use(express.json());
 app.use(express.static('public'));
 app.use(express.urlencoded({ extended: true }));
 
+// Import Handwrytten service
+const handwrytten = require('./services/handwrytten');
+
 // Routes
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.get('/signup', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'signup.html'));
+});
+
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+app.get('/profile', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'profile.html'));
+});
+
+app.get('/become-penpal', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'become-penpal.html'));
 });
 
 // Health check for Render
@@ -105,10 +143,202 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// API: Get celebrities
+// AUTHENTICATION ROUTES
+
+// Register new user
+app.post('/api/auth/register', (req, res) => {
+  const { email, password, display_name } = req.body;
+  
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password required' });
+  }
+  
+  const password_hash = hashPassword(password);
+  const token = generateToken();
+  
+  db.run(
+    'INSERT INTO users (email, password_hash, display_name, token) VALUES (?, ?, ?, ?)',
+    [email, password_hash, display_name || email.split('@')[0], token],
+    function(err) {
+      if (err) {
+        if (err.message.includes('UNIQUE constraint failed')) {
+          return res.status(409).json({ error: 'Email already registered' });
+        }
+        console.error('Registration error:', err);
+        return res.status(500).json({ error: 'Registration failed' });
+      }
+      
+      res.json({
+        success: true,
+        user_id: this.lastID,
+        token: token,
+        email: email,
+        display_name: display_name || email.split('@')[0]
+      });
+    }
+  );
+});
+
+// Login
+app.post('/api/auth/login', (req, res) => {
+  const { email, password } = req.body;
+  
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password required' });
+  }
+  
+  const password_hash = hashPassword(password);
+  
+  db.get(
+    'SELECT * FROM users WHERE email = ? AND password_hash = ?',
+    [email, password_hash],
+    (err, user) => {
+      if (err || !user) {
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+      
+      // Generate new token
+      const token = generateToken();
+      db.run('UPDATE users SET token = ? WHERE id = ?', [token, user.id]);
+      
+      res.json({
+        success: true,
+        user_id: user.id,
+        token: token,
+        email: user.email,
+        display_name: user.display_name
+      });
+    }
+  );
+});
+
+// Get current user
+app.get('/api/auth/me', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  
+  if (!token) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  db.get('SELECT id, email, display_name, bio, avatar_url FROM users WHERE token = ?', [token], (err, user) => {
+    if (err || !user) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+    res.json(user);
+  });
+});
+
+// USER PENPAL ROUTES
+
+// Become a penpal (create public profile)
+app.post('/api/become-penpal', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  const { fanmail_address, bio, category } = req.body;
+  
+  if (!token) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  if (!fanmail_address) {
+    return res.status(400).json({ error: 'Address required' });
+  }
+  
+  db.get('SELECT * FROM users WHERE token = ?', [token], (err, user) => {
+    if (err || !user) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+    
+    // Check if user already has a penpal profile
+    db.get('SELECT * FROM celebrities WHERE user_id = ?', [user.id], (err, existing) => {
+      if (existing) {
+        // Update existing
+        db.run(
+          'UPDATE celebrities SET fanmail_address = ?, bio = ?, category = ? WHERE user_id = ?',
+          [fanmail_address, bio, category || 'fan', user.id],
+          function(err) {
+            if (err) {
+              return res.status(500).json({ error: 'Failed to update profile' });
+            }
+            res.json({ success: true, celebrity_id: existing.id, message: 'Profile updated' });
+          }
+        );
+      } else {
+        // Create new penpal profile
+        db.run(
+          `INSERT INTO celebrities (name, category, bio, fanmail_address, user_id, verified, popularity_score, is_public)
+           VALUES (?, ?, ?, ?, ?, 0, 0, 1)`,
+          [user.display_name, category || 'fan', bio, fanmail_address, user.id],
+          function(err) {
+            if (err) {
+              console.error('Penpal creation error:', err);
+              return res.status(500).json({ error: 'Failed to create penpal profile' });
+            }
+            res.json({ success: true, celebrity_id: this.lastID, message: 'Welcome to Celebrity Penpal!' });
+          }
+        );
+      }
+    });
+  });
+});
+
+// Get user's penpal profile
+app.get('/api/my-penpal-profile', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  
+  if (!token) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  db.get('SELECT * FROM users WHERE token = ?', [token], (err, user) => {
+    if (err || !user) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+    
+    db.get('SELECT * FROM celebrities WHERE user_id = ?', [user.id], (err, profile) => {
+      if (err) {
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json(profile || null);
+    });
+  });
+});
+
+// Get letters received by logged-in user
+app.get('/api/my-letters', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  
+  if (!token) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  db.get('SELECT * FROM users WHERE token = ?', [token], (err, user) => {
+    if (err || !user) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+    
+    db.get('SELECT id FROM celebrities WHERE user_id = ?', [user.id], (err, profile) => {
+      if (err || !profile) {
+        return res.json([]);
+      }
+      
+      db.all(
+        'SELECT l.*, c.name as celebrity_name FROM letters l JOIN celebrities c ON l.celebrity_id = c.id WHERE l.celebrity_id = ? ORDER BY l.created_at DESC',
+        [profile.id],
+        (err, letters) => {
+          if (err) {
+            return res.status(500).json({ error: 'Database error' });
+          }
+          res.json(letters || []);
+        }
+      );
+    });
+  });
+});
+
+// API: Get celebrities (now includes user penpals)
 app.get('/api/celebrities', (req, res) => {
   const { category, search, limit = 20 } = req.query;
-  let query = 'SELECT * FROM celebrities WHERE 1=1';
+  let query = 'SELECT * FROM celebrities WHERE is_public = 1';
   const params = [];
   
   if (category && category !== 'all') {
@@ -121,7 +351,7 @@ app.get('/api/celebrities', (req, res) => {
     params.push(`%${search}%`);
   }
   
-  query += ' ORDER BY popularity_score DESC LIMIT ?';
+  query += ' ORDER BY verified DESC, popularity_score DESC LIMIT ?';
   params.push(parseInt(limit));
   
   db.all(query, params, (err, rows) => {
@@ -145,12 +375,9 @@ app.get('/api/celebrities/:id', (req, res) => {
   });
 });
 
-// Import Handwrytten service
-const handwrytten = require('./services/handwrytten');
-
 // API: Create letter order
 app.post('/api/letters', async (req, res) => {
-  const { celebrity_id, customer_email, message, handwriting_style, return_address, sender_name } = req.body;
+  const { celebrity_id, customer_email, customer_name, message, handwriting_style, return_address, sender_name } = req.body;
   
   if (!celebrity_id || !customer_email || !message) {
     return res.status(400).json({ error: 'Missing required fields' });
@@ -164,17 +391,17 @@ app.post('/api/letters', async (req, res) => {
     
     // Check if we have a valid address
     if (!celebrity.fanmail_address) {
-      return res.status(400).json({ error: 'No fanmail address available for this celebrity' });
+      return res.status(400).json({ error: 'No fanmail address available' });
     }
     
     try {
       // Save letter to database first
       const stmt = db.prepare(`
-        INSERT INTO letters (celebrity_id, customer_email, message, handwriting_style, status)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO letters (celebrity_id, customer_email, customer_name, message, handwriting_style, status)
+        VALUES (?, ?, ?, ?, ?, ?)
       `);
       
-      stmt.run(celebrity_id, customer_email, message, handwriting_style || 'casual', 'processing', async function(err) {
+      stmt.run(celebrity_id, customer_email, customer_name || 'Anonymous', message, handwriting_style || 'casual', 'processing', async function(err) {
         if (err) {
           console.error('Error creating letter:', err);
           return res.status(500).json({ error: 'Failed to create letter' });
@@ -200,7 +427,8 @@ app.post('/api/letters', async (req, res) => {
               letter_id: letter_id,
               handwrytten_order_id: result.order_id,
               status: result.status,
-              preview_url: result.preview_url
+              preview_url: result.preview_url,
+              message: `Your letter to ${celebrity.name} has been sent!`
             });
           } catch (hwError) {
             console.error('Handwrytten API error:', hwError);
@@ -210,7 +438,7 @@ app.post('/api/letters', async (req, res) => {
               success: true, 
               letter_id: letter_id,
               status: 'pending',
-              message: 'Letter queued for processing'
+              message: `Letter to ${celebrity.name} queued for processing`
             });
           }
         } else {
@@ -219,7 +447,7 @@ app.post('/api/letters', async (req, res) => {
             success: true, 
             letter_id: letter_id,
             status: 'pending',
-            message: 'Letter queued for manual processing'
+            message: `Letter to ${celebrity.name} queued for processing`
           });
         }
       });
@@ -344,7 +572,7 @@ function seedDatabase() {
         { name: "JK Rowling", category: "authors", address: "J.K. Rowling\nc/o Blair Partnership\nP.O. Box 77\nHaymarket House\nLondon SW1Y 4SP\nUnited Kingdom", popularity: 86 }
       ];
       
-      const stmt = db.prepare('INSERT OR IGNORE INTO celebrities (name, category, fanmail_address, verified, popularity_score) VALUES (?, ?, ?, 1, ?)');
+      const stmt = db.prepare('INSERT OR IGNORE INTO celebrities (name, category, fanmail_address, verified, popularity_score, is_public) VALUES (?, ?, ?, 1, ?, 1)');
       seedData.forEach(c => stmt.run(c.name, c.category, c.address, c.popularity));
       stmt.finalize();
       console.log('Database seeded with', seedData.length, 'celebrities!');

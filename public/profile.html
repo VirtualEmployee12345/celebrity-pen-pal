@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Profile - Celebrity Penpal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Caveat:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .profile-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+        }
+        .profile-header {
+            background: white;
+            padding: 2rem;
+            border-radius: 25px;
+            box-shadow: 0 4px 20px rgba(255,182,193,0.3);
+            margin-bottom: 2rem;
+        }
+        .profile-header h2 {
+            font-family: 'Caveat', cursive;
+            font-size: 2.5rem;
+            color: #FF69B4;
+            margin-bottom: 0.5rem;
+        }
+        .profile-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+        .profile-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 25px;
+            box-shadow: 0 4px 20px rgba(255,182,193,0.3);
+        }
+        .profile-card h3 {
+            color: #FF69B4;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            margin-top: 1rem;
+        }
+        .status-active {
+            background: #98FF98;
+            color: #2E8B57;
+        }
+        .status-inactive {
+            background: #FFE4EC;
+            color: #888;
+        }
+        .letter-count {
+            font-size: 3rem;
+            font-weight: 800;
+            color: #FF69B4;
+        }
+        .letters-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .letter-item {
+            padding: 1rem;
+            border-bottom: 1px solid #FFE4EC;
+        }
+        .letter-item:last-child {
+            border-bottom: none;
+        }
+        .logout-btn {
+            background: none;
+            border: 2px solid #FF69B4;
+            color: #FF69B4;
+            padding: 0.5rem 1.5rem;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-top: 1rem;
+        }
+        .logout-btn:hover {
+            background: #FF69B4;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <header class="site-header">
+        <div class="logo-container">
+            <div class="logo-icon">💌</div>
+            <h1 class="logo-text">Celebrity Penpal</h1>
+        </div>
+        <nav class="main-nav">
+            <a href="/" class="nav-link">Home</a>
+            <a href="#" class="nav-link" onclick="logout()">Logout</a>
+        </nav>
+    </header>
+
+    <main class="profile-container">
+        <div class="profile-header">
+            <h2 id="userName">Loading...</h2>
+            <p id="userEmail"></p>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+
+        <div class="profile-grid">
+            <div class="profile-card">
+                <h3>🌟 Your Penpal Status</h3>
+                <div id="penpalStatus">
+                    <p>Loading...</p>
+                </div>
+                <div id="penpalAction"></div>
+            </div>
+
+            <div class="profile-card">
+                <h3>💌 Letters Received</h3>
+                <div class="letter-count" id="letterCount">0</div>
+                <p>people have sent you letters!</p>
+                <div class="letters-list" id="lettersList">
+                    <p style="color: #888; margin-top: 1rem;">No letters yet...</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const token = localStorage.getItem('token');
+        
+        if (!token) {
+            window.location.href = '/login';
+        }
+        
+        async function loadProfile() {
+            try {
+                // Get user info
+                const userRes = await fetch('/api/auth/me', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                if (!userRes.ok) {
+                    logout();
+                    return;
+                }
+                
+                const user = await userRes.json();
+                document.getElementById('userName').textContent = `Hello, ${user.display_name}! ✨`;
+                document.getElementById('userEmail').textContent = user.email;
+                
+                // Get penpal profile
+                const profileRes = await fetch('/api/my-penpal-profile', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                const profile = await profileRes.json();
+                const statusDiv = document.getElementById('penpalStatus');
+                const actionDiv = document.getElementById('penpalAction');
+                
+                if (profile) {
+                    statusDiv.innerHTML = `
+                        <span class="status-badge status-active">Active Penpal 🎉</span>
+                        <p style="margin-top: 1rem;">You're listed as: <strong>${profile.name}</strong></p>
+                        <p>Category: ${profile.category || 'Fan'}</p>
+                        ${profile.bio ? `<p>Bio: ${profile.bio}</p>` : ''}
+                    `;
+                    actionDiv.innerHTML = `
+                        <a href="/become-penpal" class="btn btn-secondary" style="margin-top: 1rem;">Edit Profile</a>
+                    `;
+                } else {
+                    statusDiv.innerHTML = `
+                        <span class="status-badge status-inactive">Not a penpal yet</span>
+                        <p style="margin-top: 1rem; color: #666;">
+                            Want to receive handwritten letters from fans? 
+                            Become a penpal and anyone can send you mail!
+                        </p>
+                    `;
+                    actionDiv.innerHTML = `
+                        <a href="/become-penpal" class="btn btn-primary" style="margin-top: 1rem;">Become a Penpal ✨</a>
+                    `;
+                }
+                
+                // Get received letters
+                const lettersRes = await fetch('/api/my-letters', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                const letters = await lettersRes.json();
+                document.getElementById('letterCount').textContent = letters.length;
+                
+                if (letters.length > 0) {
+                    const lettersList = document.getElementById('lettersList');
+                    lettersList.innerHTML = letters.map(l => `
+                        <div class="letter-item">
+                            <p><strong>From:</strong> ${l.customer_name || 'Anonymous'}</p>
+                            <p style="font-size: 0.9rem; color: #888; margin-top: 0.5rem;">
+                                ${new Date(l.created_at).toLocaleDateString()} • Status: ${l.status}
+                            </p>
+                        </div>
+                    `).join('');
+                }
+                
+            } catch (error) {
+                console.error('Error loading profile:', error);
+            }
+        }
+        
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/';
+        }
+        
+        loadProfile();
+    </script>
+</body>
+</html>
