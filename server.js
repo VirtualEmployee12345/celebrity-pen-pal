@@ -145,32 +145,91 @@ app.get('/api/celebrities/:id', (req, res) => {
   });
 });
 
+// Import Handwrytten service
+const handwrytten = require('./services/handwrytten');
+
 // API: Create letter order
-app.post('/api/letters', (req, res) => {
-  const { celebrity_id, customer_email, message, handwriting_style } = req.body;
+app.post('/api/letters', async (req, res) => {
+  const { celebrity_id, customer_email, message, handwriting_style, return_address, sender_name } = req.body;
   
   if (!celebrity_id || !customer_email || !message) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
   
-  const stmt = db.prepare(`
-    INSERT INTO letters (celebrity_id, customer_email, message, handwriting_style)
-    VALUES (?, ?, ?, ?)
-  `);
-  
-  stmt.run(celebrity_id, customer_email, message, handwriting_style || 'casual', function(err) {
-    if (err) {
-      console.error('Error creating letter:', err);
-      return res.status(500).json({ error: 'Failed to create letter' });
+  // Get celebrity details from database
+  db.get('SELECT * FROM celebrities WHERE id = ?', [celebrity_id], async (err, celebrity) => {
+    if (err || !celebrity) {
+      return res.status(404).json({ error: 'Celebrity not found' });
     }
     
-    res.json({ 
-      success: true, 
-      letter_id: this.lastID,
-      status: 'pending'
-    });
+    // Check if we have a valid address
+    if (!celebrity.fanmail_address) {
+      return res.status(400).json({ error: 'No fanmail address available for this celebrity' });
+    }
+    
+    try {
+      // Save letter to database first
+      const stmt = db.prepare(`
+        INSERT INTO letters (celebrity_id, customer_email, message, handwriting_style, status)
+        VALUES (?, ?, ?, ?, ?)
+      `);
+      
+      stmt.run(celebrity_id, customer_email, message, handwriting_style || 'casual', 'processing', async function(err) {
+        if (err) {
+          console.error('Error creating letter:', err);
+          return res.status(500).json({ error: 'Failed to create letter' });
+        }
+        
+        const letter_id = this.lastID;
+        
+        // Try to send via Handwrytten if credentials are configured
+        if (process.env.HANDWRYTTEN_API_KEY && process.env.HANDWRYTTEN_API_SECRET) {
+          try {
+            const result = await handwrytten.sendLetter(celebrity, message, {
+              handwriting_style: handwriting_style || 'casual',
+              return_address: return_address,
+              sender_name: sender_name
+            });
+            
+            // Update letter with Handwrytten order ID
+            db.run('UPDATE letters SET handwrytten_order_id = ?, status = ? WHERE id = ?', 
+              [result.order_id, result.status, letter_id]);
+            
+            res.json({ 
+              success: true, 
+              letter_id: letter_id,
+              handwrytten_order_id: result.order_id,
+              status: result.status,
+              preview_url: result.preview_url
+            });
+          } catch (hwError) {
+            console.error('Handwrytten API error:', hwError);
+            // Mark as pending manual processing
+            db.run('UPDATE letters SET status = ? WHERE id = ?', ['pending', letter_id]);
+            res.json({ 
+              success: true, 
+              letter_id: letter_id,
+              status: 'pending',
+              message: 'Letter queued for processing'
+            });
+          }
+        } else {
+          // No Handwrytten credentials, mark as pending
+          res.json({ 
+            success: true, 
+            letter_id: letter_id,
+            status: 'pending',
+            message: 'Letter queued for manual processing'
+          });
+        }
+      });
+      stmt.finalize();
+      
+    } catch (error) {
+      console.error('Error processing letter:', error);
+      res.status(500).json({ error: 'Failed to process letter' });
+    }
   });
-  stmt.finalize();
 });
 
 // API: Forum topics
@@ -297,7 +356,7 @@ function seedDatabase() {
 
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Celebrity Pen Pal server running on port ${PORT}`);
+  console.log(`Celebrity Penpal server running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`Data directory: ${dataDir}`);
   

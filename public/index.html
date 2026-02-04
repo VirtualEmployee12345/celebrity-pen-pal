@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Celebrity Pen Pal ✨ Send Love to the Stars</title>
+    <title>Celebrity Penpal ✨ Send Love to the Stars</title>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Caveat:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
@@ -21,7 +21,7 @@
     <header class="site-header">
         <div class="logo-container">
             <div class="logo-icon">💌</div>
-            <h1 class="logo-text">Celebrity Pen Pal</h1>
+            <h1 class="logo-text">Celebrity Penpal</h1>
         </div>
         <nav class="main-nav">
             <a href="#browse" class="nav-link">Browse Stars</a>
@@ -88,7 +88,30 @@
             <div class="step">
                 <div class="step-icon">3️⃣</div>
                 <h4>We Write & Send</h4>
-                <p>Our robots (or humans!) handwrite and mail it for you</p>
+                <p>We handwrite and mail it for you</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Sample Letter Section -->
+    <section class="sample-letter" id="sample">
+        <h3 class="section-title">See What You'll Get ✨</h3>
+        <div class="sample-container">
+            <div class="sample-image">
+                <img src="/images/sample-letter.jpg" alt="Sample handwritten letter" id="sampleLetterImg">
+                <p class="sample-caption">A real handwritten letter on premium paper</p>
+            </div>
+            <div class="sample-details">
+                <h4>What's Included:</h4>
+                <ul class="feature-list">
+                    <li>✨ Premium quality paper</li>
+                    <li>🖊️ Real handwritten message in your chosen style</li>
+                    <li>💌 Matching envelope</li>
+                    <li>📮 First-class postage to the celebrity</li>
+                    <li>📧 Email confirmation when sent</li>
+                </ul>
+                <p class="sample-note">Upload your own photo to replace this example:</p>
+                <input type="file" id="sampleUpload" accept="image/*" class="file-input" style="margin-top: 1rem;">
             </div>
         </div>
     </section>
@@ -138,7 +161,7 @@
                     <label>Your Email</label>
                     <input type="email" class="form-input" id="customerEmail" placeholder="you@example.com">
                     
-                    <div class="price-tag">$4.99 per letter</div>
+                    <div class="price-tag">$10.99 per letter</div>
                     <button class="btn btn-primary btn-full" onclick="submitLetter()">Send Letter 💌</button>
                 </div>
             </div>

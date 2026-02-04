@@ -161,6 +161,19 @@ async function submitLetter() {
     }
 }
 
+// Handle sample letter image upload
+document.getElementById('sampleUpload')?.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            document.getElementById('sampleLetterImg').src = event.target.result;
+            document.querySelector('.sample-caption').textContent = 'Your uploaded sample letter';
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
 // Load forum topics
 async function loadForumTopics() {
     const container = document.getElementById('forumTopics');
