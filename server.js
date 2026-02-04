@@ -170,6 +170,74 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// DIAGNOSTIC ENDPOINT - Check database status
+app.get('/api/debug/db-status', (req, res) => {
+  const diagnostics = {
+    timestamp: new Date().toISOString(),
+    dataDir: dataDir,
+    dbPath: dbPath,
+    env: {
+      RENDER: process.env.RENDER || 'not set',
+      NODE_ENV: process.env.NODE_ENV || 'not set'
+    }
+  };
+  
+  // Check if directory exists
+  try {
+    diagnostics.dirExists = fs.existsSync(dataDir);
+    if (diagnostics.dirExists) {
+      const stats = fs.statSync(dataDir);
+      diagnostics.dirStats = {
+        isDirectory: stats.isDirectory(),
+        mode: stats.mode
+      };
+    }
+  } catch (err) {
+    diagnostics.dirError = err.message;
+  }
+  
+  // Check if DB file exists
+  try {
+    diagnostics.dbExists = fs.existsSync(dbPath);
+    if (diagnostics.dbExists) {
+      const stats = fs.statSync(dbPath);
+      diagnostics.dbStats = {
+        size: stats.size,
+        created: stats.birthtime,
+        modified: stats.mtime
+      };
+    }
+  } catch (err) {
+    diagnostics.dbError = err.message;
+  }
+  
+  // Try to query celebrities table
+  db.get("SELECT COUNT(*) as count FROM celebrities", (err, row) => {
+    if (err) {
+      diagnostics.countError = {
+        message: err.message,
+        code: err.code || 'unknown'
+      };
+      
+      // Try to check if table exists
+      db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='celebrities'", (tableErr, tableRow) => {
+        diagnostics.tableExists = !tableErr && tableRow;
+        res.json(diagnostics);
+      });
+    } else {
+      diagnostics.celebrityCount = row.count;
+      
+      // Get sample celebrity
+      db.get("SELECT id, name, is_public FROM celebrities LIMIT 1", (sampleErr, sample) => {
+        if (!sampleErr && sample) {
+          diagnostics.sampleCelebrity = sample;
+        }
+        res.json(diagnostics);
+      });
+    }
+  });
+});
+
 // AUTHENTICATION ROUTES
 
 // Register new user
@@ -477,28 +545,20 @@ app.get('/api/celebrities', (req, res) => {
     ip: req.ip
   });
 
-  const query = 'SELECT * FROM celebrities WHERE is_public = 1 LIMIT 20';
-  console.log('[api/celebrities] Executing query:', query);
+  // SIMPLIFIED: Just get all celebrities, no filters
+  const query = 'SELECT * FROM celebrities LIMIT 25';
+  console.log('[api/celebrities] Executing:', query);
 
-  db.all(query, [], (err, rows) => {
+  db.all(query, (err, rows) => {
     if (err) {
-      console.error('[api/celebrities] Database error:', {
-        message: err.message,
-        stack: err.stack
+      console.error('[api/celebrities] ERROR:', err.message);
+      return res.status(500).json({ 
+        error: 'Database error', 
+        details: err.message,
+        hint: 'Visit /api/debug/db-status for diagnostics'
       });
-      logDbStatus('api/celebrities-error');
-      db.get('SELECT COUNT(*) as count FROM celebrities', (countErr, row) => {
-        if (countErr) {
-          console.error('[api/celebrities-error] Count failed:', {
-            message: countErr.message,
-            stack: countErr.stack
-          });
-        } else {
-          console.log('[api/celebrities-error] Celebrity count:', row ? row.count : 'unknown');
-        }
-      });
-      return res.status(500).json({ error: 'Database error', details: err.message });
     }
+    console.log('[api/celebrities] SUCCESS: returned', rows.length, 'rows');
     res.json(rows);
   });
 });
