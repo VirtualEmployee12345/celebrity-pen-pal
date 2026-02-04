@@ -458,8 +458,9 @@ app.get('/api/celebrities', (req, res) => {
   const params = [];
   
   // If user is logged in, also show their private profiles
+  // MUST use parentheses around OR condition for proper SQL precedence
   if (token) {
-    query = 'SELECT * FROM celebrities WHERE is_public = 1 OR created_by_user_id = (SELECT id FROM users WHERE token = ?)';
+    query = 'SELECT * FROM celebrities WHERE (is_public = 1 OR created_by_user_id = (SELECT id FROM users WHERE token = ?))';
     params.push(token);
   }
   
@@ -476,10 +477,13 @@ app.get('/api/celebrities', (req, res) => {
   query += ' ORDER BY verified DESC, popularity_score DESC, name LIMIT ?';
   params.push(parseInt(limit));
   
+  console.log('Executing query:', query);
+  console.log('With params:', params);
+  
   db.all(query, params, (err, rows) => {
     if (err) {
       console.error('Database error in /api/celebrities:', err);
-      return res.status(500).json({ error: 'Database error' });
+      return res.status(500).json({ error: 'Database error', details: err.message });
     }
     res.json(rows);
   });
